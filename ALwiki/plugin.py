@@ -30,7 +30,6 @@
 
 from supybot.commands import *
 import supybot.callbacks as callbacks
-import json
 from urllib.parse import quote_plus
 from requests import get
 from requests.exceptions import RequestException
@@ -54,16 +53,17 @@ class ALwiki(callbacks.Plugin):
         try:
             query = "https://wiki.archlinux.org/api.php?action=opensearch&search={0}&format=json".format(
                 quote_plus(search))
-            results = json.loads(get(query).text)
-            description = results[1][0]
-            link = results[3][0]
-            if description:
-                if len(description) > 250:
-                    data = "{0}… - {1}".format(description[0:250], link)
+            results = get(query).json()
+            if results[3]:
+                description = results[1][0]
+                link = results[3][0]
+                if description:
+                    if len(description) > 250:
+                        data = "{0}… - {1}".format(description[0:250], link)
+                    else:
+                        data = "{0} - {1}".format(description, link)
                 else:
-                    data = "{0} - {1}".format(description, link)
-            else:
-                data = link
+                    data = link
         except RequestException:
             return False
 
@@ -97,6 +97,10 @@ class ALwiki(callbacks.Plugin):
         # Then with query search
         if not data:
             data = self.__querysearch(search)
+
+        # Search failed
+        if not data:
+            data = 'No results found.'
 
         irc.reply(data)
     alw = wrap(alw, ['text'])
